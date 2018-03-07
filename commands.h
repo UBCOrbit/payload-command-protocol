@@ -45,7 +45,7 @@ Reply cancelUpload(const uint8_t *, size_t);
 Reply cancelDownload(const uint8_t *, size_t);
 Reply finalizeUpload(const uint8_t *, size_t);
 
-static Reply (*commands[])(const uint8_t *, size_t) = {
+static Reply (*const commands[])(const uint8_t *, size_t) = {
     NULL,
     startDownload,
     startUpload,
