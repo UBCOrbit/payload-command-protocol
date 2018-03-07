@@ -1,12 +1,11 @@
 #include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <unistd.h>
 
-#include <protocol.h>
 #include <sha256_utils.h>
+
+#include "commands.h"
 
 #define DOWNLOAD_FILEPATH   "download-filepath"
 #define DOWNLOAD_FILEOFFSET "download-fileoffset"
@@ -334,23 +333,4 @@ Reply finalizeUpload(const uint8_t *buf, size_t buflen)
     remove(UPLOAD_FILEMETA);
 
     return EMPTY_REPLY(SUCCESS);
-}
-
-Reply (*commands[])(const uint8_t *, size_t) = {
-    NULL,
-    startDownload,
-    startUpload,
-    requestPacket,
-    sendPacket,
-    cancelUpload,
-    cancelDownload,
-    finalizeUpload
-};
-
-void runCommand(uint8_t command, uint8_t *buf, size_t buflen)
-{
-    Reply r = commands[command](buf + 1, buflen - 1);
-    // TODO: send the generated reply
-    if (r.payloadLen > 0)
-        free(r.payload);
 }

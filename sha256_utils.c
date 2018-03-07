@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "sha256.h"
+#include <sha256.h>
 
 void sha256calc(const void *data, size_t len, uint8_t shaSum[32])
 {
