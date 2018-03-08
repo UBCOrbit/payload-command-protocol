@@ -42,6 +42,9 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
 
 void writeMessage(int fd, const Message m)
 {
+    // Debug info
+    printf("Sending reply \"%s\" with %u bytes of data\n", reply_strs[m.code], m.payloadLen);
+
     uint8_t outHeader[3];
     outHeader[0] = m.code;
     memcpy(outHeader + 1, &m.payloadLen, 2);
@@ -65,6 +68,9 @@ Message readMessage(int fd)
         m.payload = malloc(m.payloadLen);
         readAllOrDie(fd, m.payload, m.payloadLen);
     }
+
+    // Debug info
+    printf("Received command \"%s\" with %u bytes of data\n", command_strs[m.code], m.payloadLen);
 
     return m;
 }

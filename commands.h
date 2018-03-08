@@ -56,5 +56,29 @@ static Message (*const commands[])(const uint8_t *, size_t) = {
     finalizeUpload
 };
 
+static char const *const command_strs[] = {
+    NULL,
+    "start download",
+    "start upload",
+    "request packet",
+    "send packet",
+    "cancel upload",
+    "cancel download",
+    "finalize upload"
+};
+
+static const char *const reply_strs[] = {
+    "success",
+    "file io",
+    "file doesn't exist",
+    "already downloading",
+    "already uploading",
+    "not downloading",
+    "not uploading",
+    "download over",
+    "shasum mismatch",
+    "invalid command"
+};
+
 #endif // commands_h_INCLUDED
 
