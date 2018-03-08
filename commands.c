@@ -114,7 +114,7 @@ Message startDownload(const uint8_t *buf, size_t buflen)
     m.payloadLen = 32;
     m.payload = malloc(32);
 
-    memcpy(m.payload + 32, shaSum, 32);
+    memcpy(m.payload, shaSum, 32);
 
     return m;
 }
@@ -202,6 +202,9 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
     if (filelen <= offset) {
         fclose(downOffset);
         fclose(downFile);
+        // TODO: remove error checking
+        remove(DOWNLOAD_FILEPATH);
+        remove(DOWNLOAD_FILEOFFSET);
         return EMPTY_MESSAGE(ERROR_DOWNLOAD_OVER);
     }
 
@@ -222,7 +225,7 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
     // TODO: fwrite error checking
     offset += packetlen;
     rewind(downOffset);
-    fwrite(&offset, 8, 1, downFile);
+    fwrite(&offset, 8, 1, downOffset);
 
     fclose(downOffset);
     fclose(downFile);
