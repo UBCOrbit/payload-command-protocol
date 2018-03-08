@@ -175,8 +175,9 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
     // Read path from filepath and offset from fileoffset
     // TODO: fread error checking
     long pathlen = fileLength(downMeta);
-    char *path = malloc(pathlen);
+    char *path = malloc(pathlen + 1);
     fread(path, 1, pathlen, downMeta);
+    path[pathlen] = '\0';
 
     uint64_t offset;
     fread(&offset, 8, 1, downOffset);
