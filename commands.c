@@ -39,7 +39,6 @@ uint8_t* readFile(FILE *fp, size_t *size)
         printf("Error reading file\n");
         exit(-1);
     }
-    fclose(fp);
 
     *size = len;
     return data;
