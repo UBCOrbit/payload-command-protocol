@@ -3,8 +3,7 @@
 
 #include <unistd.h>
 
-#include <sha256_utils.h>
-
+#include "sha256_utils.h"
 #include "commands.h"
 
 #define DOWNLOAD_FILEPATH   "download-filepath"
@@ -47,14 +46,14 @@ uint8_t* readFile(FILE *fp, size_t *size)
 }
 
 // Create data for sending a file and return file shasum
-Reply startDownload(const uint8_t *buf, size_t buflen)
+Message startDownload(const uint8_t *buf, size_t buflen)
 {
     // download payload format
     //   n bytes for path
 
     // if there are already download metadata files then return an error code
     if (access(DOWNLOAD_FILEPATH, F_OK) == 0 || access(DOWNLOAD_FILEOFFSET, F_OK) == 0)
-        return EMPTY_REPLY(ERROR_ALREADY_DOWNLOADING);
+        return EMPTY_MESSAGE(ERROR_ALREADY_DOWNLOADING);
 
     // Read file path from buffer
     char *path = malloc(buflen + 1);
@@ -63,14 +62,14 @@ Reply startDownload(const uint8_t *buf, size_t buflen)
 
     // check that the requested file exists
     if (access(path, F_OK) != 0)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     // Read in file and generate metadata
     FILE *fp = fopen(path, "r");
     // If the file wasn't opened return an error
     if (fp == NULL) {
         free(path);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     size_t fileLen;
@@ -90,12 +89,12 @@ Reply startDownload(const uint8_t *buf, size_t buflen)
 
     downMeta = fopen(DOWNLOAD_FILEPATH, "w");
     if (downMeta == NULL)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     downOffset = fopen(DOWNLOAD_FILEOFFSET, "w");
     if (downOffset == NULL) {
         fclose(downMeta);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     // write path to downMeta and zero to downPacket
@@ -111,37 +110,37 @@ Reply startDownload(const uint8_t *buf, size_t buflen)
     // Download success reply format
     //   32 bytes for sha256sum
 
-    Reply r;
-    r.status = SUCCESS;
-    r.payloadLen = 32;
-    r.payload = malloc(32);
+    Message m;
+    m.code = SUCCESS;
+    m.payloadLen = 32;
+    m.payload = malloc(32);
 
-    memcpy(r.payload + 32, shaSum, 32);
+    memcpy(m.payload + 32, shaSum, 32);
 
-    return r;
+    return m;
 }
 
 // Create data for receiving a file
-Reply startUpload(const uint8_t *buf, size_t buflen)
+Message startUpload(const uint8_t *buf, size_t buflen)
 {
     // Upload payload format
     //   32 bytes for sha256sum
 
     // If any of the upload files exist, return already uploading
     if (access(UPLOAD_FILEMETA, F_OK) == 0 || access(UPLOAD_RECEIVED, F_OK) == 0)
-        return EMPTY_REPLY(ERROR_ALREADY_UPLOADING);
+        return EMPTY_MESSAGE(ERROR_ALREADY_UPLOADING);
 
     // Open upload meta, upload packet number, and received data file, if either don't return io error
     FILE *upMeta, *upReceived;
 
     upMeta = fopen(UPLOAD_FILEMETA, "w");
     if (upMeta == NULL)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     upReceived = fopen(UPLOAD_RECEIVED, "w");
     if (upReceived == NULL) {
         fclose(upMeta);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     // write shasum to the upload meta file
@@ -151,27 +150,27 @@ Reply startUpload(const uint8_t *buf, size_t buflen)
     fclose(upMeta);
     fclose(upReceived);
 
-    return EMPTY_REPLY(SUCCESS);
+    return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Send a packet to CDH
-Reply requestPacket(const uint8_t *buf, size_t buflen)
+Message requestPacket(const uint8_t *buf, size_t buflen)
 {
     // check if all the download metadata files exist
     if (access(DOWNLOAD_FILEPATH, F_OK) != 0 || access(DOWNLOAD_FILEOFFSET, F_OK) != 0)
-        return EMPTY_REPLY(ERROR_NOT_DOWNLOADING);
+        return EMPTY_MESSAGE(ERROR_NOT_DOWNLOADING);
 
     // Open both filepath and fileoffset, and verify that they're open
     FILE *downMeta, *downOffset;
 
     downMeta = fopen(DOWNLOAD_FILEPATH, "r");
     if (downMeta == NULL)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     downOffset = fopen(DOWNLOAD_FILEOFFSET, "r+");
     if (downOffset == NULL) {
         fclose(downMeta);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     // Read path from filepath and offset from fileoffset
@@ -187,14 +186,14 @@ Reply requestPacket(const uint8_t *buf, size_t buflen)
 
     // Do a sanity check that the file exists
     if (access(path, F_OK) != 0)
-        return EMPTY_REPLY(ERROR_FILE_DOESNT_EXIST);
+        return EMPTY_MESSAGE(ERROR_FILE_DOESNT_EXIST);
 
     // Open the download file
     // If it wasn't opened return a file io error
     FILE *downFile = fopen(path, "r");
     if (downFile == NULL) {
         free(path);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     free(path);
@@ -204,21 +203,21 @@ Reply requestPacket(const uint8_t *buf, size_t buflen)
     if (filelen <= offset) {
         fclose(downOffset);
         fclose(downFile);
-        return EMPTY_REPLY(ERROR_DOWNLOAD_OVER);
+        return EMPTY_MESSAGE(ERROR_DOWNLOAD_OVER);
     }
 
     // calculate the packet length
     uint16_t packetlen = filelen - offset > PACKET_SIZE ? PACKET_SIZE : filelen - offset;
 
-    Reply r;
-    r.status = SUCCESS;
-    r.payloadLen = packetlen;
-    r.payload = malloc(packetlen);
+    Message m;
+    m.code = SUCCESS;
+    m.payloadLen = packetlen;
+    m.payload = malloc(packetlen);
 
     // Read the next packet data from the file
     // TODO: fseek, fread error checking
     fseek(downFile, offset, SEEK_SET);
-    fread(r.payload, 1, packetlen, downFile);
+    fread(m.payload, 1, packetlen, downFile);
 
     // Update the offset file
     // TODO: fwrite error checking
@@ -229,23 +228,23 @@ Reply requestPacket(const uint8_t *buf, size_t buflen)
     fclose(downOffset);
     fclose(downFile);
 
-    return r;
+    return m;
 }
 
 // Receive a packet from CDH
-Reply sendPacket(const uint8_t *buf, size_t buflen)
+Message sendPacket(const uint8_t *buf, size_t buflen)
 {
     // packet payload format
     //   n bytes for raw data
 
     // check if all the upload metadata files exist
     if (access(UPLOAD_FILEMETA, F_OK) != 0 || access(UPLOAD_RECEIVED, F_OK) != 0)
-        return EMPTY_REPLY(ERROR_NOT_UPLOADING);
+        return EMPTY_MESSAGE(ERROR_NOT_UPLOADING);
 
     FILE *upReceived = fopen(UPLOAD_RECEIVED, "a");
     // If the file wasn't opened return an io error
     if (upReceived == NULL)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     // write packet data to the receiving file
     // TODO: fwrite error checking
@@ -253,47 +252,47 @@ Reply sendPacket(const uint8_t *buf, size_t buflen)
 
     fclose(upReceived);
 
-    return EMPTY_REPLY(SUCCESS);
+    return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Erase upload packet data (if any)
-Reply cancelUpload(const uint8_t *buf, size_t buflen)
+Message cancelUpload(const uint8_t *buf, size_t buflen)
 {
     // Remove the upload files
     // TODO: log errors if any occur
     remove(UPLOAD_FILEMETA);
     remove(UPLOAD_RECEIVED);
-    return EMPTY_REPLY(SUCCESS);
+    return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Erase download packet data (if any)
-Reply cancelDownload(const uint8_t *buf, size_t buflen)
+Message cancelDownload(const uint8_t *buf, size_t buflen)
 {
     // Remove the download files
     // TODO: log errors if any occur
     remove(DOWNLOAD_FILEPATH);
     remove(DOWNLOAD_FILEOFFSET);
-    return EMPTY_REPLY(SUCCESS);
+    return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Verify the upload file integrity, move the file, and remove upload metadata
-Reply finalizeUpload(const uint8_t *buf, size_t buflen)
+Message finalizeUpload(const uint8_t *buf, size_t buflen)
 {
     // verify that a file is being transferred
     if (access(UPLOAD_FILEMETA, F_OK) != 0 || access(UPLOAD_RECEIVED, F_OK) != 0)
-        return EMPTY_REPLY(ERROR_NOT_UPLOADING);
+        return EMPTY_MESSAGE(ERROR_NOT_UPLOADING);
 
     // open uploading meta files
     FILE *upMeta, *upReceived;
 
     upMeta = fopen(UPLOAD_FILEMETA, "r");
     if (upMeta == NULL)
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
 
     upReceived = fopen(UPLOAD_RECEIVED, "r");
     if (upReceived == NULL) {
         fclose(upMeta);
-        return EMPTY_REPLY(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_FILE_IO);
     }
 
     // load file and calculate sha256sum
@@ -316,7 +315,7 @@ Reply finalizeUpload(const uint8_t *buf, size_t buflen)
 
     // verify the calculated sum matches the given sum
     if (!sha256cmp(shaSum, shaSumGiven))
-        return EMPTY_REPLY(ERROR_SHASUM_MISMATCH);
+        return EMPTY_MESSAGE(ERROR_SHASUM_MISMATCH);
 
     // Rename the upload temp file
     // TODO: log errors if any occur
@@ -332,5 +331,5 @@ Reply finalizeUpload(const uint8_t *buf, size_t buflen)
     // TODO: log errors
     remove(UPLOAD_FILEMETA);
 
-    return EMPTY_REPLY(SUCCESS);
+    return EMPTY_MESSAGE(SUCCESS);
 }

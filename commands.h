@@ -30,22 +30,22 @@
 #define ERROR_INVALID_COMMAND     9
 
 typedef struct {
-    uint8_t status;
+    uint8_t  code;
     uint16_t payloadLen;
     uint8_t *payload;
-} Reply;
+} Message;
 
-#define EMPTY_REPLY(s) (Reply){s,0,NULL}
+#define EMPTY_MESSAGE(c) (Message){c,0,NULL}
 
-Reply startDownload(const uint8_t *, size_t);
-Reply startUpload(const uint8_t *, size_t);
-Reply requestPacket(const uint8_t *, size_t);
-Reply sendPacket(const uint8_t *, size_t);
-Reply cancelUpload(const uint8_t *, size_t);
-Reply cancelDownload(const uint8_t *, size_t);
-Reply finalizeUpload(const uint8_t *, size_t);
+Message startDownload(const uint8_t *, size_t);
+Message startUpload(const uint8_t *, size_t);
+Message requestPacket(const uint8_t *, size_t);
+Message sendPacket(const uint8_t *, size_t);
+Message cancelUpload(const uint8_t *, size_t);
+Message cancelDownload(const uint8_t *, size_t);
+Message finalizeUpload(const uint8_t *, size_t);
 
-static Reply (*const commands[])(const uint8_t *, size_t) = {
+static Message (*const commands[])(const uint8_t *, size_t) = {
     NULL,
     startDownload,
     startUpload,

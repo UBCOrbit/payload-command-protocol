@@ -40,6 +40,35 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
     }
 }
 
+void writeMessage(int fd, const Message m)
+{
+    uint8_t outHeader[3];
+    outHeader[0] = m.code;
+    memcpy(outHeader + 1, &m.payloadLen, 2);
+
+    writeAllOrDie(fd, outHeader, sizeof(outHeader));
+    if (m.payload != NULL)
+        writeAllOrDie(fd, m.payload, m.payloadLen);
+}
+
+Message readMessage(int fd)
+{
+    uint8_t inHeader[3];
+    readAllOrDie(fd, inHeader, sizeof(inHeader));
+
+    Message m;
+    m.code = inHeader[0];
+    memcpy(&m.payloadLen, inHeader + 1, 2);
+
+    m.payload = NULL;
+    if (m.payloadLen > 0) {
+        m.payload = malloc(m.payloadLen);
+        readAllOrDie(fd, m.payload, m.payloadLen);
+    }
+
+    return m;
+}
+
 int main()
 {
     // Open the serial device
@@ -53,38 +82,24 @@ int main()
     // Enter an infinite loop listening for and responding to messages
     while (true) {
         // Read message from the serial line
-        uint8_t header[3];
-        readAllOrDie(serialfd, header, sizeof(header));
+        Message m = readMessage(serialfd);
 
-        uint8_t command = header[0];
-        uint16_t payloadLen;
-        memcpy(&payloadLen, header + 1, 2);
-
-        uint8_t *payload = malloc(payloadLen);
-        readAllOrDie(serialfd, payload, payloadLen);
-
-        Reply r;
+        Message reply;
 
         // Check that the received command is a valid one
         // Evaluate the command
-        if (command < MIN_COMMAND_VAL || command > MAX_COMMAND_VAL)
-            r = EMPTY_REPLY(ERROR_INVALID_COMMAND);
+        if (m.code < MIN_COMMAND_VAL || m.code > MAX_COMMAND_VAL)
+            reply = EMPTY_MESSAGE(ERROR_INVALID_COMMAND);
         else
-            r = commands[command](payload, payloadLen);
+            reply = commands[m.code](m.payload, m.payloadLen);
 
-        free(payload);
+        if (m.payload != NULL)
+            free(m.payload);
 
-        // Generate the output header
-        uint8_t outHeader[3];
-        outHeader[0] = r.status;
-        memcpy(outHeader + 1, &r.payloadLen, 2);
+        // Write out the reply message
+        writeMessage(serialfd, reply);
 
-        // write out the header and the payload
-        writeAllOrDie(serialfd, outHeader, sizeof(outHeader));
-
-        if (r.payloadLen > 0) {
-            writeAllOrDie(serialfd, r.payload, r.payloadLen);
-            free(r.payload);
-        }
+        if (reply.payload != NULL)
+            free(reply.payload);
     }
 }
