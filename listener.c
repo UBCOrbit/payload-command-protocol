@@ -43,7 +43,7 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
 void writeMessage(int fd, const Message m)
 {
     // Debug info
-    printf("Sending  reply   %-19s with %-8u bytes of data\n", reply_strs[m.code], m.payloadLen);
+    printf("Sending  reply:   %-19s with %8u bytes of data\n", reply_strs[m.code], m.payloadLen);
 
     uint8_t outHeader[3];
     outHeader[0] = m.code;
@@ -70,7 +70,7 @@ Message readMessage(int fd)
     }
 
     // Debug info
-    printf("Received command %-19s with %-8u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
 
     return m;
 }
