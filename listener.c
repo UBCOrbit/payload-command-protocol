@@ -30,7 +30,6 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
 {
     size_t offset = 0;
     ssize_t result;
-    sync();
     while (offset < len) {
         result = write(fd, buf + offset, len - offset);
         if (result < 0) {
@@ -44,7 +43,7 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
 void writeMessage(int fd, const Message m)
 {
     // Debug info
-    printf("Sending reply \"%s\" with %u bytes of data\n", reply_strs[m.code], m.payloadLen);
+    printf("Sending reply \"%s\" \twith %u bytes of data\n", reply_strs[m.code], m.payloadLen);
 
     uint8_t outHeader[3];
     outHeader[0] = m.code;
@@ -71,7 +70,7 @@ Message readMessage(int fd)
     }
 
     // Debug info
-    printf("Received command \"%s\" with %u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("Received command \"%s\" \twith %u bytes of data\n", command_strs[m.code], m.payloadLen);
 
     return m;
 }
@@ -80,7 +79,7 @@ int main()
 {
     // Open the serial device
     // TODO: some form of error handling?
-    int serialfd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY);
+    int serialfd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_NOCTTY);
     if (serialfd < 0) {
         perror("Error opening serial device " SERIAL_DEVICE);
         exit(-1);
