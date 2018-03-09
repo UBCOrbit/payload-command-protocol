@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// 2^15 bytes, 32 kb
-#define PACKET_SIZE 0x8000
+// 8 kb
+#define PACKET_SIZE 0x2000
 
-#define MIN_COMMAND_VAL 1
-#define MAX_COMMAND_VAL 7
+#define MIN_COMMAND_VAL 0
+#define MAX_COMMAND_VAL 9
 
+#define POWEROFF        0
 #define START_DOWNLOAD  1
 #define START_UPLOAD    2
 #define REQUEST_PACKET  3
@@ -17,6 +18,8 @@
 #define CANCEL_UPLOAD   5
 #define CANCEL_DOWNLOAD 6
 #define FINALIZE_UPLOAD 7
+#define TAKE_PHOTO      8
+#define EXECUTE_COMMAND 9
 
 #define SUCCESS                   0
 #define ERROR_FILE_IO             1
@@ -28,6 +31,7 @@
 #define ERROR_DOWNLOAD_OVER       7
 #define ERROR_SHASUM_MISMATCH     8
 #define ERROR_INVALID_COMMAND     9
+#define ERROR_SH_FAILURE          10
 
 typedef struct {
     uint8_t  code;
@@ -37,34 +41,41 @@ typedef struct {
 
 #define EMPTY_MESSAGE(c) (Message){c,0,NULL}
 
-Message startDownload(const uint8_t *, size_t);
-Message startUpload(const uint8_t *, size_t);
-Message requestPacket(const uint8_t *, size_t);
-Message sendPacket(const uint8_t *, size_t);
-Message cancelUpload(const uint8_t *, size_t);
+Message poweroff(      const uint8_t *, size_t);
+Message startDownload( const uint8_t *, size_t);
+Message startUpload(   const uint8_t *, size_t);
+Message requestPacket( const uint8_t *, size_t);
+Message sendPacket(    const uint8_t *, size_t);
+Message cancelUpload(  const uint8_t *, size_t);
 Message cancelDownload(const uint8_t *, size_t);
 Message finalizeUpload(const uint8_t *, size_t);
+Message takePhoto(     const uint8_t *, size_t);
+Message executeCommand(const uint8_t *, size_t);
 
 static Message (*const commands[])(const uint8_t *, size_t) = {
-    NULL,
+    poweroff,
     startDownload,
     startUpload,
     requestPacket,
     sendPacket,
     cancelUpload,
     cancelDownload,
-    finalizeUpload
+    finalizeUpload,
+    takePhoto,
+    executeCommand
 };
 
-static char const *const command_strs[] = {
-    NULL,
+static const char *const command_strs[] = {
+    "poweroff",
     "start download",
     "start upload",
     "request packet",
     "send packet",
     "cancel upload",
     "cancel download",
-    "finalize upload"
+    "finalize upload",
+    "take photo",
+    "execute command"
 };
 
 static const char *const reply_strs[] = {
@@ -77,7 +88,8 @@ static const char *const reply_strs[] = {
     "not uploading",
     "download over",
     "shasum mismatch",
-    "invalid command"
+    "invalid command",
+    "sh failure"
 };
 
 #endif // commands_h_INCLUDED

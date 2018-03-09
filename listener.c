@@ -90,10 +90,9 @@ int main()
         // Read message from the serial line
         Message m = readMessage(serialfd);
 
-        Message reply;
-
         // Check that the received command is a valid one
         // Evaluate the command
+        Message reply;
         if (m.code < MIN_COMMAND_VAL || m.code > MAX_COMMAND_VAL)
             reply = EMPTY_MESSAGE(ERROR_INVALID_COMMAND);
         else

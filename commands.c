@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 
+#include <sys/reboot.h>
+
 #include "sha256_utils.h"
 #include "commands.h"
 
@@ -42,6 +44,17 @@ uint8_t* readFile(FILE *fp, size_t *size)
 
     *size = len;
     return data;
+}
+
+// Poweroff Payload
+Message poweroff(const uint8_t *buf, size_t buflen)
+{
+    sync();
+    reboot(RB_POWER_OFF);
+    // if reboot returned, an error occurred
+    perror("Error powering off the system");
+    // Not sure what the return case should be here?
+    return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Create data for sending a file and return file shasum
@@ -335,4 +348,35 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
     remove(UPLOAD_FILEMETA);
 
     return EMPTY_MESSAGE(SUCCESS);
+}
+
+// Take a photo at the given time
+Message takePhoto(const uint8_t *buf, size_t buflen)
+{
+    // TODO: I cannot implement this yet
+    return EMPTY_MESSAGE(SUCCESS);
+}
+
+// Execute the given executable file path
+Message executeCommand(const uint8_t *buf, size_t buflen)
+{
+    char *cmd = malloc(buflen + 1);
+    memcpy(cmd, buf, buflen);
+    cmd[buflen] = '\0';
+
+    int ret = system(cmd);
+    if (ret == -1)
+        // TODO: Other, more meaningful error data here?
+        return EMPTY_MESSAGE(ERROR_SH_FAILURE);
+    else {
+        Message m;
+        m.code = SUCCESS;
+        m.payloadLen = 1;
+
+        uint8_t *status = malloc(1);
+        *status = WEXITSTATUS(ret);
+        m.payload = status;
+
+        return m;
+    }
 }
