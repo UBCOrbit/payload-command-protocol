@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// 8 kb
-#define PACKET_SIZE 0x2000
+// 32 kb
+#define PACKET_SIZE 0x8000
 
 #define MIN_COMMAND_VAL 0
 #define MAX_COMMAND_VAL 9

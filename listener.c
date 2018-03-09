@@ -30,6 +30,7 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
 {
     size_t offset = 0;
     ssize_t result;
+    sync();
     while (offset < len) {
         result = write(fd, buf + offset, len - offset);
         if (result < 0) {
