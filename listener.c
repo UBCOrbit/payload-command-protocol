@@ -10,7 +10,14 @@
 
 #define SERIAL_DEVICE "/dev/ttyTHS2"
 
-// TODO: proper error checking and handling here
+/*
+ * Justification for *OrDie functions:
+ * If read or write operations on the uart device fail
+ * there's nothing we can do to recover from almost all
+ * of the failures, so doing a complete system restart is
+ * most likely the safest thing to do.
+ */
+
 void readAllOrDie(int fd, void *buf, size_t len)
 {
     size_t offset = 0;
@@ -19,13 +26,12 @@ void readAllOrDie(int fd, void *buf, size_t len)
         result = read(fd, buf + offset, len - offset);
         if (result < 0) {
             perror("Error reading from file descriptor");
-            exit(-1);
+            exit(EXIT_FAILURE);
         }
         offset += result;
     }
 }
 
-// TODO: proper error handling here
 void writeAllOrDie(int fd, const void *buf, size_t len)
 {
     size_t offset = 0;
@@ -34,7 +40,7 @@ void writeAllOrDie(int fd, const void *buf, size_t len)
         result = write(fd, buf + offset, len - offset);
         if (result < 0) {
             perror("Error writing to file descriptor");
-            exit(-1);
+            exit(EXIT_FAILURE);
         }
         offset += result;
     }
@@ -78,11 +84,11 @@ Message readMessage(int fd)
 int main()
 {
     // Open the serial device
-    // TODO: some form of error handling?
-    int serialfd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_NOCTTY);
+    int serialfd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_SYNC);
     if (serialfd < 0) {
         perror("Error opening serial device " SERIAL_DEVICE);
-        exit(-1);
+        // If the file descriptor failed to open, there's nothing we can do besides exit
+        exit(EXIT_FAILURE);
     }
 
     // Enter an infinite loop listening for and responding to messages

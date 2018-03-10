@@ -14,14 +14,11 @@
 #define UPLOAD_FILEMETA  "upload-filemeta"
 #define UPLOAD_RECEIVED  "upload-received"
 
-// TODO: More specific io error reporting
-
 long fileLength(FILE *fp)
 {
     if (fseek(fp, 0, SEEK_END) == -1) {
-        // TODO: proper error handling/return code
         perror("Error seeking file end");
-        exit(-1);
+        return -1;
     }
 
     long len = ftell(fp);
@@ -33,13 +30,14 @@ long fileLength(FILE *fp)
 uint8_t* readFile(FILE *fp, size_t *size)
 {
     long len = fileLength(fp);
+    if (len == -1)
+        return NULL;
 
     uint8_t *data = malloc(len);
     size_t read = fread(data, 1, len, fp);
     if (read != len) {
-        // TODO: proper error handling/return code
         printf("Error reading file\n");
-        exit(-1);
+        return NULL;
     }
 
     *size = len;
@@ -49,6 +47,9 @@ uint8_t* readFile(FILE *fp, size_t *size)
 // Poweroff Payload
 Message poweroff(const uint8_t *buf, size_t buflen)
 {
+    if (buflen != 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     sync();
     reboot(RB_POWER_OFF);
     // if reboot returned, an error occurred
@@ -58,8 +59,12 @@ Message poweroff(const uint8_t *buf, size_t buflen)
 }
 
 // Create data for sending a file and return file shasum
+// TODO: maybe require paths to be absolute?
 Message startDownload(const uint8_t *buf, size_t buflen)
 {
+    if (buflen == 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // download payload format
     //   n bytes for path
 
@@ -73,21 +78,28 @@ Message startDownload(const uint8_t *buf, size_t buflen)
     path[buflen] = '\0';
 
     // check that the requested file exists
-    if (access(path, F_OK) != 0)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+    if (access(path, F_OK) != 0) {
+        free(path);
+        return EMPTY_MESSAGE(ERROR_FILE_DOESNT_EXIST);
+    }
 
     // Read in file and generate metadata
     FILE *fp = fopen(path, "r");
-    // If the file wasn't opened return an error
     if (fp == NULL) {
         free(path);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
+    free(path);
 
     size_t fileLen;
     uint8_t *fileData;
 
     fileData = readFile(fp, &fileLen);
+    if (fileData == NULL) {
+        fclose(fp);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
+
     fclose(fp);
 
     uint8_t shaSum[32];
@@ -101,19 +113,27 @@ Message startDownload(const uint8_t *buf, size_t buflen)
 
     downMeta = fopen(DOWNLOAD_FILEPATH, "w");
     if (downMeta == NULL)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
 
     downOffset = fopen(DOWNLOAD_FILEOFFSET, "w");
     if (downOffset == NULL) {
         fclose(downMeta);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     // write path to downMeta and zero to downPacket
-    // TODO: fwrite error checking?
-    fputs(path, downMeta);
+    if (fputs(path, downMeta) == EOF) {
+        fclose(downMeta);
+        fclose(downOffset);
+        return EMPTY_MESSAGE(ERROR_WRITING_FILE);
+    }
+
     uint64_t offset = 0;
-    fwrite(&offset, 8, 1, downOffset);
+    if (fwrite(&offset, 8, 1, downOffset) != 1) {
+        fclose(downMeta);
+        fclose(downOffset);
+        return EMPTY_MESSAGE(ERROR_WRITING_FILE);
+    }
 
     fclose(downMeta);
     fclose(downOffset);
@@ -135,6 +155,9 @@ Message startDownload(const uint8_t *buf, size_t buflen)
 // Create data for receiving a file
 Message startUpload(const uint8_t *buf, size_t buflen)
 {
+    if (buflen != 32)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // Upload payload format
     //   32 bytes for sha256sum
 
@@ -147,17 +170,20 @@ Message startUpload(const uint8_t *buf, size_t buflen)
 
     upMeta = fopen(UPLOAD_FILEMETA, "w");
     if (upMeta == NULL)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
 
     upReceived = fopen(UPLOAD_RECEIVED, "w");
     if (upReceived == NULL) {
         fclose(upMeta);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     // write shasum to the upload meta file
-    // TODO: fwrite error checking
-    fwrite(buf, 32, 1, upMeta);
+    if (fwrite(buf, 32, 1, upMeta) != 1) {
+        fclose(upMeta);
+        fclose(upReceived);
+        return EMPTY_MESSAGE(ERROR_WRITING_FILE);
+    }
 
     fclose(upMeta);
     fclose(upReceived);
@@ -168,6 +194,9 @@ Message startUpload(const uint8_t *buf, size_t buflen)
 // Send a packet to CDH
 Message requestPacket(const uint8_t *buf, size_t buflen)
 {
+    if (buflen != 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // check if all the download metadata files exist
     if (access(DOWNLOAD_FILEPATH, F_OK) != 0 || access(DOWNLOAD_FILEOFFSET, F_OK) != 0)
         return EMPTY_MESSAGE(ERROR_NOT_DOWNLOADING);
@@ -177,48 +206,82 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
 
     downMeta = fopen(DOWNLOAD_FILEPATH, "r");
     if (downMeta == NULL)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
 
     downOffset = fopen(DOWNLOAD_FILEOFFSET, "r+");
     if (downOffset == NULL) {
         fclose(downMeta);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     // Read path from filepath and offset from fileoffset
-    // TODO: fread error checking
     long pathlen = fileLength(downMeta);
+    if (pathlen == -1) {
+        fclose(downMeta);
+        fclose(downOffset);
+        return EMPTY_MESSAGE(ERROR_SEEKING_FILE);
+    }
+
     char *path = malloc(pathlen + 1);
-    fread(path, 1, pathlen, downMeta);
+
+    if (fread(path, 1, pathlen, downMeta) != pathlen) {
+        fclose(downMeta);
+        fclose(downOffset);
+        free(path);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
+
     path[pathlen] = '\0';
 
     uint64_t offset;
-    fread(&offset, 8, 1, downOffset);
+    if (fread(&offset, 8, 1, downOffset) != 1) {
+        fclose(downMeta);
+        fclose(downOffset);
+        free(path);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
 
     fclose(downMeta);
 
     // Do a sanity check that the file exists
-    if (access(path, F_OK) != 0)
+    if (access(path, F_OK) != 0) {
+        fclose(downOffset);
+        free(path);
         return EMPTY_MESSAGE(ERROR_FILE_DOESNT_EXIST);
+    }
 
     // Open the download file
     // If it wasn't opened return a file io error
     FILE *downFile = fopen(path, "r");
     if (downFile == NULL) {
+        fclose(downOffset);
         free(path);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     free(path);
 
     // Check that the offset is less than the file length
     long filelen = fileLength(downFile);
+    if (filelen == -1) {
+        fclose(downOffset);
+        fclose(downFile);
+        return EMPTY_MESSAGE(ERROR_SEEKING_FILE);
+    }
+
+    // If the offset is equal to the file length, the file has been fully transferred
+    // remove the download metadata
     if (filelen <= offset) {
         fclose(downOffset);
         fclose(downFile);
-        // TODO: remove error checking
-        remove(DOWNLOAD_FILEPATH);
-        remove(DOWNLOAD_FILEOFFSET);
+        if (remove(DOWNLOAD_FILEPATH) == -1) {
+            perror("remove");
+            return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+        }
+        if (remove(DOWNLOAD_FILEOFFSET) == -1) {
+            perror("remove");
+            return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+        }
         return EMPTY_MESSAGE(ERROR_DOWNLOAD_OVER);
     }
 
@@ -231,15 +294,29 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
     m.payload = malloc(packetlen);
 
     // Read the next packet data from the file
-    // TODO: fseek, fread error checking
-    fseek(downFile, offset, SEEK_SET);
-    fread(m.payload, 1, packetlen, downFile);
+    if (fseek(downFile, offset, SEEK_SET) == -1) {
+        fclose(downOffset);
+        fclose(downFile);
+        free(m.payload);
+        return EMPTY_MESSAGE(ERROR_SEEKING_FILE);
+    }
+
+    if (fread(m.payload, 1, packetlen, downFile) != packetlen) {
+        fclose(downOffset);
+        fclose(downFile);
+        free(m.payload);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
 
     // Update the offset file
-    // TODO: fwrite error checking
     offset += packetlen;
     rewind(downOffset);
-    fwrite(&offset, 8, 1, downOffset);
+    if (fwrite(&offset, 8, 1, downOffset) != 1) {
+        fclose(downOffset);
+        fclose(downFile);
+        free(m.payload);
+        return EMPTY_MESSAGE(ERROR_WRITING_FILE);
+    }
 
     fclose(downOffset);
     fclose(downFile);
@@ -250,6 +327,9 @@ Message requestPacket(const uint8_t *buf, size_t buflen)
 // Receive a packet from CDH
 Message sendPacket(const uint8_t *buf, size_t buflen)
 {
+    if (buflen == 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // packet payload format
     //   n bytes for raw data
 
@@ -258,13 +338,14 @@ Message sendPacket(const uint8_t *buf, size_t buflen)
         return EMPTY_MESSAGE(ERROR_NOT_UPLOADING);
 
     FILE *upReceived = fopen(UPLOAD_RECEIVED, "a");
-    // If the file wasn't opened return an io error
     if (upReceived == NULL)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
 
     // write packet data to the receiving file
-    // TODO: fwrite error checking
-    fwrite(buf, 1, buflen, upReceived);
+    if (fwrite(buf, 1, buflen, upReceived) != buflen) {
+        fclose(upReceived);
+        return EMPTY_MESSAGE(ERROR_WRITING_FILE);
+    }
 
     fclose(upReceived);
 
@@ -274,26 +355,49 @@ Message sendPacket(const uint8_t *buf, size_t buflen)
 // Erase upload packet data (if any)
 Message cancelUpload(const uint8_t *buf, size_t buflen)
 {
+    if (buflen != 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // Remove the upload files
-    // TODO: log errors if any occur
-    remove(UPLOAD_FILEMETA);
-    remove(UPLOAD_RECEIVED);
+    if (remove(UPLOAD_FILEMETA) == -1) {
+        perror("remove");
+        return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+    }
+    if (remove(UPLOAD_RECEIVED) == -1) {
+        perror("remove");
+        return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+    }
     return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Erase download packet data (if any)
 Message cancelDownload(const uint8_t *buf, size_t buflen)
 {
+    if (buflen != 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
     // Remove the download files
-    // TODO: log errors if any occur
-    remove(DOWNLOAD_FILEPATH);
-    remove(DOWNLOAD_FILEOFFSET);
+    if (remove(DOWNLOAD_FILEPATH) == -1) {
+        perror("remove");
+        return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+    }
+    if (remove(DOWNLOAD_FILEOFFSET) == -1) {
+        perror("remove");
+        return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+    }
     return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Verify the upload file integrity, move the file, and remove upload metadata
+// TODO: require paths to be absolute?
 Message finalizeUpload(const uint8_t *buf, size_t buflen)
 {
+    if (buflen == 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
+    // finalize upload payload format
+    //   n bytes for file path
+
     // verify that a file is being transferred
     if (access(UPLOAD_FILEMETA, F_OK) != 0 || access(UPLOAD_RECEIVED, F_OK) != 0)
         return EMPTY_MESSAGE(ERROR_NOT_UPLOADING);
@@ -303,12 +407,12 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
 
     upMeta = fopen(UPLOAD_FILEMETA, "r");
     if (upMeta == NULL)
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
 
     upReceived = fopen(UPLOAD_RECEIVED, "r");
     if (upReceived == NULL) {
         fclose(upMeta);
-        return EMPTY_MESSAGE(ERROR_FILE_IO);
+        return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     // load file and calculate sha256sum
@@ -316,6 +420,12 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
     uint8_t *fileData;
 
     fileData = readFile(upReceived, &fileLen);
+    if (fileData == NULL) {
+        fclose(upMeta);
+        fclose(upReceived);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
+
     fclose(upReceived);
 
     uint8_t shaSum[32];
@@ -324,9 +434,11 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
     free(fileData);
 
     // read in the given shasum
-    // TODO: fread error checking
     uint8_t shaSumGiven[32];
-    fread(shaSumGiven, 32, 1, upMeta);
+    if (fread(shaSumGiven, 32, 1, upMeta) != 1) {
+        fclose(upMeta);
+        return EMPTY_MESSAGE(ERROR_READING_FILE);
+    }
     fclose(upMeta);
 
     // verify the calculated sum matches the given sum
@@ -339,13 +451,19 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
     memcpy(path, buf, buflen);
     path[buflen] = '\0';
 
-    rename(UPLOAD_RECEIVED, path);
+    if (rename(UPLOAD_RECEIVED, path) == -1) {
+        perror("rename");
+        free(path);
+        return EMPTY_MESSAGE(ERROR_RENAMING_FILE);
+    }
 
     free(path);
 
     // Remove upload file metadata
-    // TODO: log errors
-    remove(UPLOAD_FILEMETA);
+    if (remove(UPLOAD_FILEMETA) == -1) {
+        perror("remove");
+        return EMPTY_MESSAGE(ERROR_REMOVING_FILE);
+    }
 
     return EMPTY_MESSAGE(SUCCESS);
 }
@@ -354,19 +472,26 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
 Message takePhoto(const uint8_t *buf, size_t buflen)
 {
     // TODO: I cannot implement this yet
+    // TODO: make sure to include payload bounds checking
     return EMPTY_MESSAGE(SUCCESS);
 }
 
 // Execute the given executable file path
 Message executeCommand(const uint8_t *buf, size_t buflen)
 {
+    if (buflen == 0)
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+
+    // execute command payload format
+    //   n bytes for command string
+
     char *cmd = malloc(buflen + 1);
     memcpy(cmd, buf, buflen);
     cmd[buflen] = '\0';
 
     int ret = system(cmd);
     if (ret == -1)
-        // TODO: Other, more meaningful error data here?
+        // TODO: Other, more meaningful error data?
         return EMPTY_MESSAGE(ERROR_SH_FAILURE);
     else {
         Message m;

@@ -22,7 +22,7 @@
 #define EXECUTE_COMMAND 9
 
 #define SUCCESS                   0
-#define ERROR_FILE_IO             1
+#define ERROR_OPENING_FILE        1
 #define ERROR_FILE_DOESNT_EXIST   2
 #define ERROR_ALREADY_DOWNLOADING 3
 #define ERROR_ALREADY_UPLOADING   4
@@ -32,6 +32,12 @@
 #define ERROR_SHASUM_MISMATCH     8
 #define ERROR_INVALID_COMMAND     9
 #define ERROR_SH_FAILURE          10
+#define ERROR_INVALID_PAYLOAD     11
+#define ERROR_READING_FILE        12
+#define ERROR_SEEKING_FILE        13
+#define ERROR_WRITING_FILE        14
+#define ERROR_REMOVING_FILE       15
+#define ERROR_RENAMING_FILE       16
 
 typedef struct {
     uint8_t  code;
@@ -80,7 +86,7 @@ static const char *const command_strs[] = {
 
 static const char *const reply_strs[] = {
     "success",
-    "file io",
+    "error opening file",
     "file doesn't exist",
     "already downloading",
     "already uploading",
@@ -89,7 +95,12 @@ static const char *const reply_strs[] = {
     "download over",
     "shasum mismatch",
     "invalid command",
-    "sh failure"
+    "sh failure",
+    "invalid payload",
+    "error reading file",
+    "error seeking file",
+    "error writing to file",
+    "error removing file"
 };
 
 #endif // commands_h_INCLUDED
