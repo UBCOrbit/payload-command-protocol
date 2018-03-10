@@ -89,13 +89,13 @@ Message startDownload(const uint8_t *buf, size_t buflen)
         free(path);
         return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
-    free(path);
 
     size_t fileLen;
     uint8_t *fileData;
 
     fileData = readFile(fp, &fileLen);
     if (fileData == NULL) {
+        free(path);
         fclose(fp);
         return EMPTY_MESSAGE(ERROR_READING_FILE);
     }
@@ -112,21 +112,27 @@ Message startDownload(const uint8_t *buf, size_t buflen)
     FILE *downMeta, *downOffset;
 
     downMeta = fopen(DOWNLOAD_FILEPATH, "w");
-    if (downMeta == NULL)
+    if (downMeta == NULL) {
+        free(path);
         return EMPTY_MESSAGE(ERROR_OPENING_FILE);
+    }
 
     downOffset = fopen(DOWNLOAD_FILEOFFSET, "w");
     if (downOffset == NULL) {
+        free(path);
         fclose(downMeta);
         return EMPTY_MESSAGE(ERROR_OPENING_FILE);
     }
 
     // write path to downMeta and zero to downPacket
     if (fputs(path, downMeta) == EOF) {
+        free(path);
         fclose(downMeta);
         fclose(downOffset);
         return EMPTY_MESSAGE(ERROR_WRITING_FILE);
     }
+
+    free(path);
 
     uint64_t offset = 0;
     if (fwrite(&offset, 8, 1, downOffset) != 1) {
