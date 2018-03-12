@@ -3,8 +3,6 @@
 
 #include <unistd.h>
 
-#include <sys/reboot.h>
-
 #include "sha256_utils.h"
 #include "commands.h"
 
@@ -50,9 +48,11 @@ Message poweroff(const uint8_t *buf, size_t buflen)
     if (buflen != 0)
         return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
 
-    sync();
-    reboot(RB_POWER_OFF);
-    // if reboot returned, an error occurred
+    // Not portable but this only needs to run on Tom
+    extern char **environ;
+    char *argv[] = { NULL };
+    execve("/sbin/poweroff", argv, environ);
+    // if exec returned, an error occurred
     perror("Error powering off the system");
     // Not sure what the return case should be here?
     return EMPTY_MESSAGE(SUCCESS);
