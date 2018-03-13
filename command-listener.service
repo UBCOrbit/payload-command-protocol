@@ -10,8 +10,8 @@ SuccessAction=poweroff
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/nvidia/listener-dir
-ExecStart=/home/nvidia/command-listener
+WorkingDirectory=/home/nvidia/transfer-temp
+ExecStart=/home/nvidia/payload-command-protocol/build/command-listener
 Restart=on-failure
 
 [Install]
