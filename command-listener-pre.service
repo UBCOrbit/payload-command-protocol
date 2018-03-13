@@ -1,0 +1,11 @@
+[Unit]
+Description=Service for setting the uart port to the correct settings
+After=sys-devices-c280000.serial-tty-ttyTHS2.device
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/stty -F /dev/ttyTHS2 115200 raw -echo
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 [Unit]
 Description=Daemon for listening for commands over the uart port
 BindsTo=sys-devices-c280000.serial-tty-ttyTHS2.device
-After=sys-devices-c280000.serial-tty-ttyTHS2.device
+After=sys-devices-c280000.serial-tty-ttyTHS2.device command-listener-pre.service
 StartLimitIntervalSec=1
 StartLimitBurst=3
 FailureAction=poweroff

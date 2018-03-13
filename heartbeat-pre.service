@@ -5,7 +5,7 @@ After=sys-kernel-config.mount
 [Service]
 Type=oneshot
 User=root
-ExecStart=/bin/echo 398 > /sys/class/gpio/export
+ExecStart=/bin/sh -c "/bin/echo 398 > /sys/class/gpio/export"
 
 [Install]
 WantedBy=multi-user.target
