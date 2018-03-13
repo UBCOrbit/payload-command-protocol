@@ -1,0 +1,18 @@
+[Unit]
+Description=Daemon for listening for commands over the uart port
+;BindsTo=
+;After=
+StartLimitIntervalSec=1
+StartLimitBurst=3
+FailureAction=poweroff
+SuccessAction=poweroff
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/nvidia/listener-dir
+ExecStart=/home/nvidia/command-listener
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

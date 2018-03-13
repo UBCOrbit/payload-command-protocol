@@ -18,6 +18,8 @@
  * most likely the safest thing to do.
  */
 
+// TODO: CALL TERMIOS TO CONFIGURE TTY PROPERLY
+
 void readAllOrDie(int fd, void *buf, size_t len)
 {
     size_t offset = 0;
