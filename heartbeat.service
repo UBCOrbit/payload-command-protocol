@@ -1,13 +1,13 @@
 [Unit]
 Description=Service for running the heartbeat to let CDH know we're alive
-;BindsTo=
-;After=
+After=sys-kernel-config.mount
+After=heartbeat-pre.service
 
 [Service]
 Type=simple
 User=root
 ExecStart=/home/nvidia/heartbeat.sh
-Restart=on-abort
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

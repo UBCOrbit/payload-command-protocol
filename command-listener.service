@@ -1,7 +1,7 @@
 [Unit]
 Description=Daemon for listening for commands over the uart port
-;BindsTo=
-;After=
+BindsTo=sys-devices-c280000.serial-tty-ttyTHS2.device
+After=sys-devices-c280000.serial-tty-ttyTHS2.device
 StartLimitIntervalSec=1
 StartLimitBurst=3
 FailureAction=poweroff
@@ -12,7 +12,7 @@ Type=simple
 User=root
 WorkingDirectory=/home/nvidia/listener-dir
 ExecStart=/home/nvidia/command-listener
-Restart=on-abort
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

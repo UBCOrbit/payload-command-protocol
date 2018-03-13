@@ -48,14 +48,8 @@ Message poweroff(const uint8_t *buf, size_t buflen)
     if (buflen != 0)
         return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
 
-    // Not portable but this only needs to run on Tom
-    extern char **environ;
-    char *argv[] = { NULL };
-    execve("/sbin/poweroff", argv, environ);
-    // if exec returned, an error occurred
-    perror("Error powering off the system");
-    // Not sure what the return case should be here?
-    return EMPTY_MESSAGE(SUCCESS);
+    // Systemd should detect this exit and poweroff the system as a result
+    exit(EXIT_SUCCESS);
 }
 
 // Create data for sending a file and return file shasum

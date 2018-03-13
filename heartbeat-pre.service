@@ -1,0 +1,11 @@
+[Unit]
+Description=Service for setting up the gpio pin for the heartbeat
+After=sys-kernel-config.mount
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/echo 398 > /sys/class/gpio/export
+
+[Install]
+WantedBy=multi-user.target
