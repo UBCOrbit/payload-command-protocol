@@ -1,7 +1,7 @@
 [Unit]
 Description=Service for running the heartbeat to let CDH know we're alive
-After=sys-kernel-config.mount
-After=heartbeat-pre.service
+Requires=heartbeat-pre.service
+After=sys-kernel-config.mount heartbeat-pre.service
 
 [Service]
 Type=simple
