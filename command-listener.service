@@ -3,8 +3,6 @@ Description=Daemon for listening for commands over the uart port
 BindsTo=sys-devices-c280000.serial-tty-ttyTHS2.device
 Requires=command-listener-pre.service
 After=sys-devices-c280000.serial-tty-ttyTHS2.device command-listener-pre.service
-StartLimitIntervalSec=1
-StartLimitBurst=3
 FailureAction=poweroff
 SuccessAction=poweroff
 
@@ -13,7 +11,7 @@ Type=simple
 User=root
 WorkingDirectory=/home/nvidia/transfer-temp
 ExecStart=/home/nvidia/payload-command-protocol/build/command-listener
-Restart=on-failure
+Restart=no
 
 [Install]
 WantedBy=multi-user.target
