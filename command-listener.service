@@ -9,7 +9,7 @@ Type=oneshot
 User=root
 WorkingDirectory=/home/nvidia/transfer-temp
 ExecStart=/home/nvidia/payload-command-protocol/build/command-listener
-ExecStart=@SYSTEMCTL@ poweroff
+ExecStart=/sbin/poweroff
 FailureAction=poweroff
 
 [Install]
