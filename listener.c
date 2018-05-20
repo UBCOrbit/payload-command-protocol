@@ -31,6 +31,7 @@ void readAllOrDie(int fd, void *buf, size_t len)
             exit(EXIT_FAILURE);
         }
         offset += result;
+        printf("        Received: %ld bytes.\n", offset);
     }
 }
 
@@ -64,12 +65,20 @@ void writeMessage(int fd, const Message m)
 
 Message readMessage(int fd)
 {
+    printf("Waiting for message header...\n");
+
     uint8_t inHeader[3];
     readAllOrDie(fd, inHeader, sizeof(inHeader));
+
+    printf("    Message header received\n");
 
     Message m;
     m.code = inHeader[0];
     memcpy(&m.payloadLen, inHeader + 1, 2);
+
+    printf("---- Received command: %-19s. Expecting %8u bytes of data\n", command_strs[m.code], m.payloadLen);
+
+    printf("Waiting for message payload...\n");
 
     m.payload = NULL;
     if (m.payloadLen > 0) {
@@ -77,8 +86,10 @@ Message readMessage(int fd)
         readAllOrDie(fd, m.payload, m.payloadLen);
     }
 
+    printf("    Message payload received\n");
+
     // Debug info
-    printf("Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("---- Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
 
     return m;
 }
@@ -86,12 +97,14 @@ Message readMessage(int fd)
 int main()
 {
     // Open the serial device
+    printf("Opening serial device...");
     int serialfd = open(SERIAL_DEVICE, O_RDWR | O_NOCTTY | O_SYNC);
     if (serialfd < 0) {
         perror("Error opening serial device " SERIAL_DEVICE);
         // If the file descriptor failed to open, there's nothing we can do besides exit
         exit(EXIT_FAILURE);
     }
+    printf("Done.\n");
 
     // Enter an infinite loop listening for and responding to messages
     while (true) {
