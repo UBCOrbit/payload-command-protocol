@@ -8,7 +8,7 @@
 
 #include "commands.h"
 
-#define SERIAL_DEVICE "/dev/ttyTHS2"
+#define SERIAL_DEVICE "/dev/ttyUSB0"
 
 /*
  * Justification for *OrDie functions:
