@@ -2,15 +2,15 @@
 Description=Daemon for listening for commands over the uart port
 BindsTo=sys-devices-c280000.serial-tty-ttyTHS2.device
 Requires=command-listener-pre.service
-After=sys-devices-c280000.serial-tty-ttyTHS2.device command-listener-pre.service
+After=sys-devices-c280000.serial-tty-ttyUSB0.device command-listener-pre.service
 
 [Service]
-Type=oneshot
+Type=simple
 User=root
-WorkingDirectory=/home/nvidia/transfer-temp
+WorkingDirectory=/home/nvidia/orbit/cdh_comm/transfer-temp
 ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/build/command-listener
-ExecStart=/sbin/poweroff
-FailureAction=poweroff
+# TODO: send a code to CDH that this was the type of failure?
+ExecStopPost=/bin/systemctl poweroff
 
 [Install]
 WantedBy=multi-user.target
