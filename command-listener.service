@@ -8,7 +8,7 @@ After=sys-devices-c280000.serial-tty-ttyTHS2.device command-listener-pre.service
 Type=oneshot
 User=root
 WorkingDirectory=/home/nvidia/transfer-temp
-ExecStart=/home/nvidia/payload-command-protocol/build/command-listener
+ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/build/command-listener
 ExecStart=/sbin/poweroff
 FailureAction=poweroff
 
