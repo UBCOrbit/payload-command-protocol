@@ -1,6 +1,7 @@
 [Unit]
 Description=Service for setting the uart port to the correct settings
-After=sys-devices-c280000.serial-tty-ttyTHS2.device
+After=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device
+#sys-devices-c280000.serial-tty-ttyUSB0.device
 
 [Service]
 Type=oneshot

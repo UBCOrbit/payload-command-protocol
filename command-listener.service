@@ -1,8 +1,10 @@
 [Unit]
 Description=Daemon for listening for commands over the uart port
-BindsTo=sys-devices-c280000.serial-tty-ttyTHS2.device
+BindsTo=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device
+#sys-devices-c280000.serial-tty-ttyUSB0.device
 Requires=command-listener-pre.service
-After=sys-devices-c280000.serial-tty-ttyUSB0.device command-listener-pre.service
+After=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device command-listener-pre.service
+#sys-devices-c280000.serial-tty-ttyUSB0.device command-listener-pre.service
 
 [Service]
 Type=simple
