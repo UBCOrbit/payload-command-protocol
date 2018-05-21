@@ -10,7 +10,7 @@ WorkingDirectory=/home/nvidia/orbit/cdh_comm/transfer-temp
 ExecStartPre=/bin/stty -F /dev/ttyUSB0 115200 raw -echo
 ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/build/command-listener
 # TODO: send a code to CDH that this was the type of failure?
-ExecStopPost=/bin/systemctl poweroff
+#ExecStopPost=/bin/systemctl poweroff
 
 [Install]
 WantedBy=multi-user.target
