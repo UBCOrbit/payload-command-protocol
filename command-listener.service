@@ -1,15 +1,13 @@
 [Unit]
 Description=Daemon for listening for commands over the uart port
 BindsTo=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device
-#sys-devices-c280000.serial-tty-ttyUSB0.device
-Requires=command-listener-pre.service
-After=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device command-listener-pre.service
-#sys-devices-c280000.serial-tty-ttyUSB0.device command-listener-pre.service
+After=sys-devices-3530000.xhci-usb1-1\x2d2-1\x2d2:1.0-ttyUSB0-tty-ttyUSB0.device
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/home/nvidia/orbit/cdh_comm/transfer-temp
+ExecStartPre=/bin/stty -F /dev/ttyUSB0 115200 raw -echo
 ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/build/command-listener
 # TODO: send a code to CDH that this was the type of failure?
 ExecStopPost=/bin/systemctl poweroff

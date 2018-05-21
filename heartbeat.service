@@ -1,12 +1,13 @@
 [Unit]
 Description=Service for running the heartbeat to let CDH know we're alive
-Requires=heartbeat-pre.service
-After=sys-kernel-config.mount heartbeat-pre.service
+After=sys-kernel-config.mount
 
 [Service]
 Type=simple
 User=root
+ExecStartPre=/bin/sh -c "/bin/echo 398 > /sys/class/gpio/export"
 ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/heartbeat.sh
+ExecStopPost=/bin/sh -c "/bin/echo 398 > /sys/class/gpio/unexport"
 Restart=always
 
 [Install]
