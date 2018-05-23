@@ -25,13 +25,17 @@ void readAllOrDie(int fd, void *buf, size_t len)
     size_t offset = 0;
     ssize_t result;
     while (offset < len) {
+        printf("    Waiting for data...\r");
+        fflush(stdout);
         result = read(fd, buf + offset, len - offset);
         if (result < 0) {
             perror("Error reading from file descriptor");
             exit(EXIT_FAILURE);
         }
         offset += result;
-        printf("        Received: %ld bytes.\n", offset);
+
+        // Debug info
+        printf("    Received: %ld out of %ld bytes.\n", offset, len);
     }
 }
 
@@ -65,20 +69,21 @@ void writeMessage(int fd, const Message m)
 
 Message readMessage(int fd)
 {
-    printf("Waiting for message header...\n");
+    printf("\nSTART Message Read\n\n");
+    printf("    ---- HEADER ----\n");
 
     uint8_t inHeader[3];
     readAllOrDie(fd, inHeader, sizeof(inHeader));
 
-    printf("    Message header received\n");
+    printf("    Message header received.\n\n");
 
     Message m;
     m.code = inHeader[0];
     memcpy(&m.payloadLen, inHeader + 1, 2);
 
-    printf("---- Received command: %-19s. Expecting %8u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("    Command: %-19s. Payload length: %8u bytes.\n\n", command_strs[m.code], m.payloadLen);
 
-    printf("Waiting for message payload...\n");
+    printf("    ---- PAYLOAD ----\n");
 
     m.payload = NULL;
     if (m.payloadLen > 0) {
@@ -86,10 +91,12 @@ Message readMessage(int fd)
         readAllOrDie(fd, m.payload, m.payloadLen);
     }
 
-    printf("    Message payload received\n");
+    printf("    Message payload received.\n\n");
 
     // Debug info
-    printf("---- Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("    ---- SUMMARY ----\n");
+    printf("    Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
+    printf("\nEND Message Read\n\n");
 
     return m;
 }
