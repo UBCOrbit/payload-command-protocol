@@ -431,14 +431,6 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
     uint8_t shaSum[32];
     sha256calc(fileData, fileLen, shaSum);
 
-int i;
-for (i = 0; i < 32; i++)
-{
-    if (i > 0) printf(",");
-    printf("0x%02X", shaSum[i]);
-}
-printf("\n");
-
     free(fileData);
 
     // read in the given shasum
