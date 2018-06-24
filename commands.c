@@ -12,10 +12,10 @@
 #define DOWNLOAD_FILEPATH   "download-filepath"
 #define DOWNLOAD_FILEOFFSET "download-fileoffset"
 
-#define UPLOAD_FILEMETA  "upload-filemeta"
-#define UPLOAD_RECEIVED  "upload-received"
+#define UPLOAD_FILEMETA "upload-filemeta"
+#define UPLOAD_RECEIVED "upload-received"
 
-#define TEST_IMAGE_DIR_PATH = "~/orbit/fire-detection/images"
+#define TEST_IMAGE_DIR_PATH "~/orbit/fire-detection/images"
 
 long fileLength(FILE *fp)
 {
@@ -474,38 +474,38 @@ Message finalizeUpload(const uint8_t *buf, size_t buflen)
 }
 
 // Take a photo at the given time
+// TODO: make this actually function for taking photos
 Message takePhoto(const uint8_t *buf, size_t buflen)
 {
-    // TODO: I cannot implement this yet
-    // TODO: make sure to include payload bounds checking
     if (buflen != 16) {
         return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
     }
 
-    char *time = malloc(8);
-    memcpy(time, buf, 8);
-    
-    char *id = malloc(8);
-    memcpy(time, buf + 8, 8);
+    uint64_t time = *((uint64_t *) buf);
+    // memcpy(&time, buf, 8);
+
+    uint64_t id = *((uint64_t *) (buf + 8));
+    // memcpy(&id, buf + 8, 8);
+    // TODO: Use id when saving the photo
 
     int fileCount = 0;
     DIR *dirp;
     struct dirent *entry;
-    
+
     dirp = opendir(TEST_IMAGE_DIR_PATH);
-    while ((entry = readdir(dirp) != NULL) {
+    while ((entry = readdir(dirp)) != NULL) {
         if (entry->d_type == DT_REG) {
             fileCount++;
         }
     }
     closedir(dirp);
 
-    randomImageNum = rand() % (fileCount + 1);
-    
+    int randomImageNum = rand() % (fileCount + 1);
+
     char *selectedFile;
     fileCount = 0;
-    dirp = opendir(TEST_IMGAE_DIR_PATH);
-    while ((entry = readdir(dirp) != NULL) {
+    dirp = opendir(TEST_IMAGE_DIR_PATH);
+    while ((entry = readdir(dirp)) != NULL) {
         if (entry->d_type == DT_REG) {
             if (fileCount == randomImageNum) {
                selectedFile = entry->d_name;
@@ -514,8 +514,8 @@ Message takePhoto(const uint8_t *buf, size_t buflen)
             fileCount++;
         }
     }
+    closedir(dirp);
 
-    
     return EMPTY_MESSAGE(SUCCESS);
 }
 
