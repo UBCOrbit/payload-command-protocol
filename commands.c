@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <unistd.h>
+
+#include <dirent.h>
 
 #include "sha256_utils.h"
 #include "commands.h"
@@ -11,6 +14,8 @@
 
 #define UPLOAD_FILEMETA  "upload-filemeta"
 #define UPLOAD_RECEIVED  "upload-received"
+
+#define TEST_IMAGE_DIR_PATH = "~/orbit/fire-detection/images"
 
 long fileLength(FILE *fp)
 {
@@ -473,6 +478,44 @@ Message takePhoto(const uint8_t *buf, size_t buflen)
 {
     // TODO: I cannot implement this yet
     // TODO: make sure to include payload bounds checking
+    if (buflen != 16) {
+        return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
+    }
+
+    char *time = malloc(8);
+    memcpy(time, buf, 8);
+    
+    char *id = malloc(8);
+    memcpy(time, buf + 8, 8);
+
+    int fileCount = 0;
+    DIR *dirp;
+    struct dirent *entry;
+    
+    dirp = opendir(TEST_IMAGE_DIR_PATH);
+    while ((entry = readdir(dirp) != NULL) {
+        if (entry->d_type == DT_REG) {
+            fileCount++;
+        }
+    }
+    closedir(dirp);
+
+    randomImageNum = rand() % (fileCount + 1);
+    
+    char *selectedFile;
+    fileCount = 0;
+    dirp = opendir(TEST_IMGAE_DIR_PATH);
+    while ((entry = readdir(dirp) != NULL) {
+        if (entry->d_type == DT_REG) {
+            if (fileCount == randomImageNum) {
+               selectedFile = entry->d_name;
+               break;
+            }
+            fileCount++;
+        }
+    }
+
+    
     return EMPTY_MESSAGE(SUCCESS);
 }
 
