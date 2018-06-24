@@ -8,7 +8,7 @@
 
 #include "commands.h"
 
-#define VERBOSE true
+#define VERBOSE false
 
 #define SERIAL_DEVICE "/dev/ttyTHS1"
 
@@ -27,7 +27,7 @@ void readAllOrDie(int fd, void *buf, size_t len)
     size_t offset = 0;
     ssize_t result;
     while (offset < len) {
-        printf("    Waiting for data...\r");
+        if(VERBOSE) printf("    Waiting for data...\r");
         fflush(stdout);
         result = read(fd, buf + offset, len - offset);
         if (result < 0) {
@@ -71,21 +71,21 @@ void writeMessage(int fd, const Message m)
 
 Message readMessage(int fd)
 {
-    printf("\nSTART Message Read\n\n");
-    printf("    ---- HEADER ----\n");
+    if (VERBOSE) printf("\nSTART Message Read\n\n");
+    if (VERBOSE) printf("    ---- HEADER ----\n");
 
     uint8_t inHeader[3];
     readAllOrDie(fd, inHeader, sizeof(inHeader));
 
-    printf("    Message header received.\n\n");
+    if (VERBOSE) printf("    Message header received.\n\n");
 
     Message m;
     m.code = inHeader[0];
     memcpy(&m.payloadLen, inHeader + 1, 2);
 
-    printf("    Command: %-19s. Payload length: %8u bytes.\n\n", command_strs[m.code], m.payloadLen);
+    if (VERBOSE) printf("    Command: %-19s. Payload length: %8u bytes.\n\n", command_strs[m.code], m.payloadLen);
 
-    printf("    ---- PAYLOAD ----\n");
+    if (VERBOSE) printf("    ---- PAYLOAD ----\n");
 
     m.payload = NULL;
     if (m.payloadLen > 0) {
@@ -93,12 +93,12 @@ Message readMessage(int fd)
         readAllOrDie(fd, m.payload, m.payloadLen);
     }
 
-    printf("    Message payload received.\n\n");
+    if (VERBOSE) printf("    Message payload received.\n\n");
 
     // Debug info
-    printf("    ---- SUMMARY ----\n");
+    if (VERBOSE) printf("    ---- SUMMARY ----\n");
     printf("    Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
-    printf("\nEND Message Read\n\n");
+    if (VERBOSE) printf("\nEND Message Read\n\n");
 
     return m;
 }
