@@ -8,7 +8,7 @@
 
 #include "commands.h"
 
-#define VERBOSE false
+#define VERBOSE true
 
 #define SERIAL_DEVICE "/dev/ttyTHS1"
 

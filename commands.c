@@ -9,13 +9,11 @@
 #include "sha256_utils.h"
 #include "commands.h"
 
-#define DOWNLOAD_FILEPATH   "download-filepath"
-#define DOWNLOAD_FILEOFFSET "download-fileoffset"
+#define DOWNLOAD_FILEPATH   "transfer/download-filepath"
+#define DOWNLOAD_FILEOFFSET "transfer/download-fileoffset"
 
-#define UPLOAD_FILEMETA "upload-filemeta"
-#define UPLOAD_RECEIVED "upload-received"
-
-#define TEST_IMAGE_DIR_PATH "~/orbit/fire-detection/images"
+#define UPLOAD_FILEMETA "transfer/upload-filemeta"
+#define UPLOAD_RECEIVED "transfer/upload-received"
 
 long fileLength(FILE *fp)
 {
@@ -75,6 +73,9 @@ Message startDownload(const uint8_t *buf, size_t buflen)
     char *path = malloc(buflen + 1);
     memcpy(path, buf, buflen);
     path[buflen] = '\0';
+
+    printf("Hello\n");
+    printf("Attempting File Download %s\n", path);
 
     // check that the requested file exists
     if (access(path, F_OK) != 0) {
@@ -149,10 +150,12 @@ Message startDownload(const uint8_t *buf, size_t buflen)
 
     Message m;
     m.code = SUCCESS;
-    m.payloadLen = 32;
-    m.payload = malloc(32);
+    //m.payloadLen = 32;
+    m.payloadLen = 0;
+    m.payload = NULL;
+    //m.payload = malloc(32);
 
-    memcpy(m.payload, shaSum, 32);
+    //memcpy(m.payload, shaSum, 32);
 
     return m;
 }
@@ -481,40 +484,17 @@ Message takePhoto(const uint8_t *buf, size_t buflen)
         return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
     }
 
-    uint64_t time = *((uint64_t *) buf);
-    // memcpy(&time, buf, 8);
-
+    uint64_t timeMicros = *((uint64_t *) buf);
     uint64_t id = *((uint64_t *) (buf + 8));
-    // memcpy(&id, buf + 8, 8);
-    // TODO: Use id when saving the photo
 
-    int fileCount = 0;
-    DIR *dirp;
-    struct dirent *entry;
+    printf("Taking photo in: %ld us\n", timeMicros);
 
-    dirp = opendir(TEST_IMAGE_DIR_PATH);
-    while ((entry = readdir(dirp)) != NULL) {
-        if (entry->d_type == DT_REG) {
-            fileCount++;
-        }
-    }
-    closedir(dirp);
+    usleep((useconds_t)timeMicros); // TODO handle out of bounds on this cast
 
-    int randomImageNum = rand() % (fileCount + 1);
-
-    char *selectedFile;
-    fileCount = 0;
-    dirp = opendir(TEST_IMAGE_DIR_PATH);
-    while ((entry = readdir(dirp)) != NULL) {
-        if (entry->d_type == DT_REG) {
-            if (fileCount == randomImageNum) {
-               selectedFile = entry->d_name;
-               break;
-            }
-            fileCount++;
-        }
-    }
-    closedir(dirp);
+    // Pretend to take a picture
+    printf("Taking photo\n");
+    sleep(2);
+    printf("Photo captured\n");
 
     return EMPTY_MESSAGE(SUCCESS);
 }

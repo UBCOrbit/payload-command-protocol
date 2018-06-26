@@ -6,7 +6,7 @@ After=sys-devices-3110000.serial-tty-ttyTHS1.device
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/nvidia/orbit/cdh_comm/transfer-temp
+WorkingDirectory=/home/nvidia/orbit/workspace
 ExecStartPre=/bin/stty -F /dev/ttyTHS1 115200 raw -echo
 ExecStart=/home/nvidia/orbit/cdh_comm/payload-command-protocol/build/command-listener
 # TODO: send a code to CDH that this was the type of failure?
