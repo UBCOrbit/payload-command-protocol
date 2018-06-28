@@ -484,10 +484,13 @@ Message takePhoto(const uint8_t *buf, size_t buflen)
         return EMPTY_MESSAGE(ERROR_INVALID_PAYLOAD);
     }
 
-    uint64_t timeMicros = *((uint64_t *) buf);
-    uint64_t id = *((uint64_t *) (buf + 8));
+    //uint64_t timeMicros = *((uint64_t *) buf);
+    //uint64_t id = *((uint64_t *) (buf + 8));
 
-    printf("Taking photo in: %ld us\n", timeMicros);
+    uint64_t timeMicros;
+    memcpy(&timeMicros, buf, 8);
+
+    printf("Taking photo in: %lld us\n", timeMicros);
 
     usleep((useconds_t)timeMicros); // TODO handle out of bounds on this cast
 
