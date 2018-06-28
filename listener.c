@@ -123,10 +123,9 @@ Message readMessage(int fd)
 
     // Debug info
     printf("    ---- SUMMARY ----\n");
-#endif
     printf("    Received command: %-19s with %8u bytes of data\n", command_strs[m.code], m.payloadLen);
-#ifdef VERBOSE
     printf("\nEND Message Read\n\n");
+    fflush(stdout);
 #endif
 
     return m;

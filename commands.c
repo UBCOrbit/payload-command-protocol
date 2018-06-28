@@ -490,7 +490,7 @@ Message takePhoto(const uint8_t *buf, size_t buflen)
     uint64_t timeMicros;
     memcpy(&timeMicros, buf, 8);
 
-    printf("Taking photo in: %lld us\n", timeMicros);
+    printf("Taking photo in: %lu us\n", timeMicros);
 
     usleep((useconds_t)timeMicros); // TODO handle out of bounds on this cast
 
